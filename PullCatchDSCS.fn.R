@@ -8,6 +8,7 @@ library(nwfscSurvey)
 dat = nwfscSurvey::PullCatch.fn(SurveyName = "NWFSC.Combo", SciName = "Gorgonacea")
 dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", SciName = "Gorgonacea")
 dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "coral")
+dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "DSCS")
 dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo")
 
 #' Pull catch data from the NWFSC data warehouse
@@ -15,7 +16,7 @@ dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo")
 #' This function can be used to pull a single species or all observed species
 #' In order to pull all species leave Name = NULL and SciName = NULL
 #'
-#' @param Name  common name of species data to pull from the data warehouse
+#' @param Name  common name of species data to pull from the data warehouse; options are (coral, sponge, sea pen, DSCS)
 #' @param SciName scientific name of species data to pull from the data warehouse
 #' @param YearRange range of years to pull data
 #' @param SurveyName survey to pull the data for the options are: 
@@ -25,7 +26,7 @@ dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo")
 #' @param Dir directory where the file should be saved
 #' @param verbose opt to print out message statements
 #'
-#' @author Chantel Wetzel based on code by John Wallace
+#' @author Curt Whitmire, based on code from Chantel Wetzel and John Wallace
 #' @export
 #'
 #' @import jsonlite
@@ -137,36 +138,50 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
   if (verbose){
     message(UrlText)}
   
-  # if (Species == "DSCS"){
-  #   UrlText1 <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.catch_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
-  #                     "station_invalid=0,",
-  #                     "performance=Satisfactory,", "depth_ftm>=30,depth_ftm<=700,",
-  #                     "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
-  #                     ",species_subcategory=coral", #CEW added to return only coral taxa
-  #                     "&variables=", paste0(Vars, collapse = ","))
-  #   UrlText2 <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.catch_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
-  #                      "station_invalid=0,",
-  #                      "performance=Satisfactory,", "depth_ftm>=30,depth_ftm<=700,",
-  #                      "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
-  #                      ",best_available_taxonomy_dim$phylum_20=Porifera", #CEW added to return only coral taxa
-  #                      "&variables=", paste0(Vars, collapse = ","))
-  #   UrlText3 <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.catch_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
-  #                      "station_invalid=0,",
-  #                      "performance=Satisfactory,", "depth_ftm>=30,depth_ftm<=700,",
-  #                      "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
-  #                      ",best_available_taxonomy_dim$order_40=Pennatulacea", #CEW added to return only coral taxa
-  #                      "&variables=", paste0(Vars, collapse = ","))
-  # }
-  
+  if (Species == "DSCS"){
+    UrlText1 <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.catch_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
+                      "station_invalid=0,",
+                      "performance=Satisfactory,", "depth_ftm>=30,depth_ftm<=700,",
+                      "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
+                      ",species_subcategory=coral", #CEW added to return only coral taxa
+                      "&variables=", paste0(Vars, collapse = ","))
+    UrlText2 <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.catch_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
+                       "station_invalid=0,",
+                       "performance=Satisfactory,", "depth_ftm>=30,depth_ftm<=700,",
+                       "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
+                       ",best_available_taxonomy_dim$phylum_20=Porifera", #CEW added to return only coral taxa
+                       "&variables=", paste0(Vars, collapse = ","))
+    UrlText3 <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.catch_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
+                       "station_invalid=0,",
+                       "performance=Satisfactory,", "depth_ftm>=30,depth_ftm<=700,",
+                       "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
+                       ",best_available_taxonomy_dim$order_40=Pennatulacea", #CEW added to return only coral taxa
+                       "&variables=", paste0(Vars, collapse = ","))
+    DataPull1 <- try(jsonlite::fromJSON(UrlText1))
+    if(!is.data.frame(DataPull1)) {
+      stop(cat("\nNo data returned by the warehouse for the filters given.\n Make sure the year range is correct for the project selected and the input name is correct,\n otherwise there may be no data for this species from this project.\n"))
+    }
+    DataPull2 <- try(jsonlite::fromJSON(UrlText2))
+    if(!is.data.frame(DataPull2)) {
+      stop(cat("\nNo data returned by the warehouse for the filters given.\n Make sure the year range is correct for the project selected and the input name is correct,\n otherwise there may be no data for this species from this project.\n"))
+    }
+    DataPull3 <- try(jsonlite::fromJSON(UrlText3))
+    if(!is.data.frame(DataPull3)) {
+      stop(cat("\nNo data returned by the warehouse for the filters given.\n Make sure the year range is correct for the project selected and the input name is correct,\n otherwise there may be no data for this species from this project.\n"))
+    }
+    # CEW: add logic to append results of multiple pull requests
+    DataPull <- rbind(DataPull1, DataPull2, DataPull3)
+  }
+
   #CEW: end edits
   
   if (verbose){
     message("Pulling catch data. This can take up to ~ 30 seconds (or more).")}
   # Pull data from the warehouse
-  DataPull <- try(jsonlite::fromJSON(UrlText))
-  if(!is.data.frame(DataPull)) {
-    stop(cat("\nNo data returned by the warehouse for the filters given.\n Make sure the year range is correct for the project selected and the input name is correct,\n otherwise there may be no data for this species from this project.\n"))
-  }
+  # DataPull <- try(jsonlite::fromJSON(UrlText))
+  # if(!is.data.frame(DataPull)) {
+  #   stop(cat("\nNo data returned by the warehouse for the filters given.\n Make sure the year range is correct for the project selected and the input name is correct,\n otherwise there may be no data for this species from this project.\n"))
+  # }
   
   # Remove water hauls
   fix =  is.na(DataPull[,"operation_dim$legacy_performance_code"])

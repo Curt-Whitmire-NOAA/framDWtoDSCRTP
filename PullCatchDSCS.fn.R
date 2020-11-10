@@ -7,7 +7,7 @@ library(nwfscSurvey)
 # For testing purposes
 dat = nwfscSurvey::PullCatch.fn(SurveyName = "NWFSC.Combo", SciName = "Gorgonacea")
 dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", SciName = "Gorgonacea")
-dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "sponge")
+dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "coral")
 dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo")
 
 #' Pull catch data from the NWFSC data warehouse
@@ -52,9 +52,9 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
                                 ",\ni.e., ", Dir, ", that doesn't exist.")
   }
   
-  if (Name %in% c("coral", "sponge", "sea pen")) { var.name = "scientific_name"; Species = Name; new.name = "Common_name"}
+  if (Name %in% c("DSCS", "coral", "sponge", "sea pen")) { var.name = "scientific_name"; Species = Name; new.name = "Common_name"} #CEW: added logic to pull DSCS records
   if (is.null(Name)) { var.name = "scientific_name"; Species = SciName; new.name = "Scientific_name"; outName = Name}
-  # if (is.null(SciName)) { var.name = "common_name"; Species = Name; new.name = "Common_name"; outName = SciName}
+  # if (is.null(SciName)) { var.name = "common_name"; Species = Name; new.name = "Common_name"; outName = SciName} #CEW: need to fix this logic now that added DSCS logic
   if (is.null(SciName) & is.null(Name)) { var.name = "common_name"; Species = "pull all"; new.name = "Common_name" }#stop("Need to specify Name or SciName to pull data!")}
   
   # Survey options available in the data warehouse
@@ -87,8 +87,7 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
             )
   
   Vars.short <- c(var.name, "taxon_rank", "year", "subsample_count", "subsample_wt_kg", "project", "cpue_kg_per_ha_der",
-                  "total_catch_numbers", "total_catch_wt_kg", "vessel", "tow"
-                  )
+                  "total_catch_numbers", "total_catch_wt_kg", "vessel", "tow")
   
   
   UrlText <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.catch_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
@@ -107,7 +106,7 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
   #                     "&variables=", paste0(Vars, collapse = ","))
   # }
   
-  #CEW start edits: added to return only DSCS taxa
+  #CEW: start edits: added to return only DSCS taxa
   if (Species == "coral"){
     UrlText <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.catch_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
                       "station_invalid=0,",
@@ -137,7 +136,29 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
   
   if (verbose){
     message(UrlText)}
-  #CEW end edits
+  
+  # if (Species == "DSCS"){
+  #   UrlText1 <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.catch_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
+  #                     "station_invalid=0,",
+  #                     "performance=Satisfactory,", "depth_ftm>=30,depth_ftm<=700,",
+  #                     "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
+  #                     ",species_subcategory=coral", #CEW added to return only coral taxa
+  #                     "&variables=", paste0(Vars, collapse = ","))
+  #   UrlText2 <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.catch_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
+  #                      "station_invalid=0,",
+  #                      "performance=Satisfactory,", "depth_ftm>=30,depth_ftm<=700,",
+  #                      "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
+  #                      ",best_available_taxonomy_dim$phylum_20=Porifera", #CEW added to return only coral taxa
+  #                      "&variables=", paste0(Vars, collapse = ","))
+  #   UrlText3 <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.catch_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
+  #                      "station_invalid=0,",
+  #                      "performance=Satisfactory,", "depth_ftm>=30,depth_ftm<=700,",
+  #                      "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
+  #                      ",best_available_taxonomy_dim$order_40=Pennatulacea", #CEW added to return only coral taxa
+  #                      "&variables=", paste0(Vars, collapse = ","))
+  # }
+  
+  #CEW: end edits
   
   if (verbose){
     message("Pulling catch data. This can take up to ~ 30 seconds (or more).")}
@@ -161,8 +182,8 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
   DataPull = DataPull[,Vars.short]
   
   Data = dplyr::rename(DataPull,
-                       Year = year, Subsample_count = subsample_count,
-                       Subsample_wt_kg = subsample_wt_kg, Project = project,
+                       ObservationYear = year, Subsample_count = subsample_count,
+                       Subsample_wt_kg = subsample_wt_kg, SurveyID = project,
                        CPUE_kg_per_ha = cpue_kg_per_ha_der, Subsample_count = subsample_count,
                        Subsample_wt_kg = subsample_wt_kg, Vessel = vessel, Tow = tow)
   
@@ -170,10 +191,10 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
   names(Data)[which(names(Data)=="common_name")] = "Common_name"
   
   # Pull all tow data (includes tows where the species was not observed)
-  Vars <- c("project", "year", "vessel", "pass", "tow", "datetime_utc_iso", "gear_depth_m_der", "longitude_dd", "latitude_dd", "area_swept_ha_der", "trawl_id", "operation_dim$legacy_performance_code", 
-            "temperature_at_gear_c_der", "salinity_at_gear_psu_der", "o2_at_gear_ml_per_l_der") #CEW added for DSCRTP
-  Vars.short <- c("project", "year", "vessel", "pass", "tow", "datetime_utc_iso", "gear_depth_m_der", "longitude_dd", "latitude_dd", "area_swept_ha_der", "trawl_id", 
-                  "temperature_at_gear_c_der", "salinity_at_gear_psu_der", "o2_at_gear_ml_per_l_der") #CEW added for DSCRTP
+  Vars <- c("project", "year", "vessel", "tow", "datetime_utc_iso", "gear_depth_m_der", "longitude_dd", "latitude_dd", "area_swept_ha_der", "trawl_id", "operation_dim$legacy_performance_code", 
+            "temperature_at_gear_c_der", "salinity_at_gear_psu_der", "o2_at_gear_ml_per_l_der") #CEW: added for DSCRTP
+  Vars.short <- c("project", "year", "vessel", "tow", "datetime_utc_iso", "gear_depth_m_der", "longitude_dd", "latitude_dd", "area_swept_ha_der", "trawl_id", 
+                  "temperature_at_gear_c_der", "salinity_at_gear_psu_der", "o2_at_gear_ml_per_l_der") #CEW: added for DSCRTP
   
   UrlText <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.operation_haul_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
                     "station_invalid=0,",
@@ -181,6 +202,9 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
                     "depth_ftm>=30,depth_ftm<=700,",
                     "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
                     "&variables=", paste0(Vars, collapse = ","))
+  
+  if (verbose){
+    message(UrlText)}
   
   All.Tows <- jsonlite::fromJSON(UrlText)
   
@@ -191,14 +215,14 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
   All.Tows = All.Tows[keep,]
   All.Tows = All.Tows[,Vars.short]
   
-  All.Tows = dplyr::rename(All.Tows, Project = project, Trawl_id = trawl_id, Year = year,
-                           Pass= pass, Vessel = vessel, Tow = tow, Date = datetime_utc_iso,
-                           Depth_m = gear_depth_m_der, Longitude_dd = longitude_dd, Latitude_dd = latitude_dd, Area_Swept_ha = area_swept_ha_der, 
-                           Temp_C = temperature_at_gear_c_der, Sal_psu = salinity_at_gear_psu_der, O2_mLL = o2_at_gear_ml_per_l_der) #CEW added for DSCRTP
+  All.Tows = dplyr::rename(All.Tows, SurveyID = project, Trawl_id = trawl_id, ObservationYear = year,
+                           Vessel = vessel, Tow = tow, ObservationDate = datetime_utc_iso,
+                           DepthInMeters = gear_depth_m_der, LongitudeInDD = longitude_dd, LatitudeInDD = latitude_dd, Area_Swept_ha = area_swept_ha_der, 
+                           Temperature = temperature_at_gear_c_der, Salinity = salinity_at_gear_psu_der, Oxygen = o2_at_gear_ml_per_l_der) #CEW: added for DSCRTP
   
-  All.Tows <- All.Tows[!duplicated(paste(All.Tows$Year, All.Tows$Pass, All.Tows$Vessel, All.Tows$Tow)),
-                       c("Project", "Trawl_id", "Year", "Pass", "Vessel", "Tow", "Date", "Depth_m", "Longitude_dd", "Latitude_dd", "Area_Swept_ha", 
-                         "Temp_C", "Sal_psu", "O2_mLL")] #CEW added for DSCRTP
+  All.Tows <- All.Tows[!duplicated(paste(All.Tows$ObservationYear, All.Tows$Pass, All.Tows$Vessel, All.Tows$Tow)),
+                       c("SurveyID", "Trawl_id", "ObservationYear", "Vessel", "Tow", "ObservationDate", "DepthInMeters", "LongitudeInDD", "LatitudeInDD", "Area_Swept_ha", 
+                         "Temperature", "Salinity", "Oxygen")] #CEW: added for DSCRTP
   
   # Link each data set together based on trawl_id
   if("Common_name" %in% names(Data)) {
@@ -210,7 +234,7 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
   }
   Out = dplyr::left_join(grid, All.Tows)
   # Out = dplyr::left_join(Out, Data)
-  Out = dplyr::left_join(Data, Out) #CEW changed to only include tows with positive catch
+  Out = dplyr::left_join(Data, Out) #CEW: changed to only include tows with positive catch
   #Out = dplyr::left_join(All.Tows, Data)
   
   # Fill in zeros where needed
@@ -237,11 +261,40 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
   if (!is.null(Name)) { Out$Common_name <- Species }
   if (!is.null(SciName)) { Out$Scientific_name <- Species }
   
-  Out$Date <- chron::chron(format(as.POSIXlt(Out$Date, format = "%Y-%m-%dT%H:%M:%S"), "%Y-%m-%d"), format = "y-m-d", out.format = "YYYY-m-d")
+  # Out$ObservationDate <- chron::chron(format(as.POSIXlt(Out$ObservationDate, format = "%Y-%m-%dT%H:%M:%S"), "%Y-%m-%d"), format = "y-m-d", out.format = "YYYY-m-d")
+  Out$ObservationDate <- format(as.POSIXlt(Out$ObservationDate, format = "%Y-%m-%dT%H:%M:%SZ"), "%Y-%m-%d") #CEW: cleaner way to export date format
   
-  Out$Project <- projectShort
+  Out$Project <- projectShort #CEW: changes to long name of project to short name (e.g., "NWFSC.Combo")
   
   Out$Trawl_id = as.character(Out$Trawl_id)
+  
+  #CEW: add metadata fields
+  Out$DataProvider <- "NOAA, Northwest Fisheries Science Center"
+  Out$DataContact <- "Whitmire, Curt: curt.whitmire@noaa.gov"
+  Out$Citation <- "West Coast Groundfish Bottom Trawl Survey, NOAA Fisheries, NWFSC/FRAM, 2725 Montlake Blvd. East, Seattle, WA 98112"
+  Out$Repository <- "FRAM Data Warehouse"
+  Out$VehicleName <- "NA"
+  Out$PI <- "NA"
+  Out$PIAffiliation <- "NA"
+  Out$SamplingEquipment <- "trawl"
+  Out$DepthMethod <- "reported"
+  Out$NavType <- "ship GPS; other"
+  Out$LocationAccuracy <- ">1000m"
+  Out$Ocean <- "North Pacific"
+  Out$LargeMarineEcosystem <- "California Current"
+  Out$Country <- "USA"
+  Out$FishCouncilRegion <- "Pacific"
+  Out$RecordType <- "catch record"
+  Out$Reporter <- "Whitmire, Curt"
+  Out$ReporterEmail <- "curt.whitmire@noaa.gov"
+  Out$Locality <- "NA"
+  Out$ObservationTime <- "NA"
+  Out$ImageFilePath <- "NA"
+  Out$Density <- "NA"
+  Out$Condition <- "NA"
+  Out$OccurrenceRemarks <- "wet weight"
+  Out$Habitat <- "NA"
+  OutSubstrate <- "NA"
   
   # Convert the CPUE into km2
   Out$cpue_kg_km2 = Out$CPUE_kg_per_ha * 100

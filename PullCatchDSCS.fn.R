@@ -1,8 +1,14 @@
 library(nwfscSurvey)
 
-# Edit PullCatch.fn to accommodate multiple SurveyNames and a list of SciNames
+# Edit PullCatch.fn.R to accommodate a custom list of SciNames for corals, sponges, and sea pens
 # Ask Beth about creating functional groups matching those in national DSCS database
-dat = PullCatchDSCS.fn(SurveyName = c("NWFSC.Combo"), SciName = "Gorgonacea")
+# Draws data from the FRAM Data Warehouse tables: 'catch_fact' and 'operation_haul_fact'
+
+# For testing purposes
+dat = nwfscSurvey::PullCatch.fn(SurveyName = "NWFSC.Combo", SciName = "Gorgonacea")
+dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", SciName = "Gorgonacea")
+dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "sponge")
+dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo")
 
 #' Pull catch data from the NWFSC data warehouse
 #' The website is: https://www.webapp.nwfsc.noaa.gov/data
@@ -32,7 +38,7 @@ dat = PullCatchDSCS.fn(SurveyName = c("NWFSC.Combo"), SciName = "Gorgonacea")
 #' dat = PullCatch.fn(SurveyName = "NWFSC.Combo")
 #'}
 
-PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(1980, 5000), SurveyName = NULL, SaveFile = FALSE, Dir = NULL, verbose = TRUE)
+PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5000), SurveyName = NULL, SaveFile = FALSE, Dir = NULL, verbose = TRUE)
 {
   
   if (SurveyName %in% c("NWFSC.Shelf.Rockfish", "NWFSC.Hook.Line")){
@@ -46,9 +52,10 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(1980, 5
                                 ",\ni.e., ", Dir, ", that doesn't exist.")
   }
   
+  if (Name %in% c("coral", "sponge", "sea pen")) { var.name = "scientific_name"; Species = Name; new.name = "Common_name"}
   if (is.null(Name)) { var.name = "scientific_name"; Species = SciName; new.name = "Scientific_name"; outName = Name}
-  if (is.null(SciName)) { var.name = "common_name"; Species = Name; new.name = "Common_name"; outName = SciName}
-  if (is.null(SciName) & is.null(Name)) { var.name = "common_name"; Species = "pull all"; new.name = "Common_name" }#stop("Need to specifiy Name or SciName to pull data!")}
+  # if (is.null(SciName)) { var.name = "common_name"; Species = Name; new.name = "Common_name"; outName = SciName}
+  if (is.null(SciName) & is.null(Name)) { var.name = "common_name"; Species = "pull all"; new.name = "Common_name" }#stop("Need to specify Name or SciName to pull data!")}
   
   # Survey options available in the data warehouse
   surveys = createMatrix()
@@ -72,19 +79,15 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(1980, 5
   
   # Pull data for the specific species for the following variables
   Vars <- c(var.name, "taxon_rank", "year", "subsample_count", "subsample_wt_kg", "project", "cpue_kg_per_ha_der",
-            "total_catch_numbers", "total_catch_wt_kg", "vessel", "tow", 
-            "operation_dim$legacy_performance_code", "statistical_partition_dim$statistical_partition_type",
-            "best_available_taxonomy_whid", "best_available_taxonomy_observation_detail_whid",
-            "field_identified_taxonomy_dim$worms_aphiaid",
-            "best_available_taxonomy_dim$worms_aphiaid"
+            "total_catch_numbers", "total_catch_wt_kg", "vessel", "tow", "operation_dim$legacy_performance_code", 
+            "statistical_partition_dim$statistical_partition_type"
+            # , "best_available_taxonomy_whid", "best_available_taxonomy_observation_detail_whid",
+            # "field_identified_taxonomy_dim$worms_aphiaid",
+            # "best_available_taxonomy_dim$worms_aphiaid"
             )
   
   Vars.short <- c(var.name, "taxon_rank", "year", "subsample_count", "subsample_wt_kg", "project", "cpue_kg_per_ha_der",
-                  "total_catch_numbers", "total_catch_wt_kg", "vessel", "tow",
-                  "operation_dim$legacy_performance_code", "statistical_partition_dim$statistical_partition_type",
-                  "best_available_taxonomy_whid", "best_available_taxonomy_observation_detail_whid",
-                  "field_identified_taxonomy_dim$worms_aphiaid",
-                  "best_available_taxonomy_dim$worms_aphiaid"
+                  "total_catch_numbers", "total_catch_wt_kg", "vessel", "tow"
                   )
   
   
@@ -94,14 +97,47 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(1980, 5
                     "field_identified_taxonomy_dim$", var.name,"=", paste(strsplit(Species, " ")[[1]], collapse = "%20"),
                     ",date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
                     "&variables=", paste0(Vars, collapse = ","))
+
   
-  if (Species == "pull all"){
+  # if (Species == "pull all"){
+  #   UrlText <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.catch_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
+  #                     "station_invalid=0,",
+  #                     "performance=Satisfactory,", "depth_ftm>=30,depth_ftm<=700,",
+  #                     "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
+  #                     "&variables=", paste0(Vars, collapse = ","))
+  # }
+  
+  #CEW start edits: added to return only DSCS taxa
+  if (Species == "coral"){
     UrlText <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.catch_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
                       "station_invalid=0,",
                       "performance=Satisfactory,", "depth_ftm>=30,depth_ftm<=700,",
                       "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
+                      ",species_subcategory=coral", #CEW added to return only coral taxa
                       "&variables=", paste0(Vars, collapse = ","))
   }
+  
+  if (Species == "sponge"){
+    UrlText <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.catch_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
+                      "station_invalid=0,",
+                      "performance=Satisfactory,", "depth_ftm>=30,depth_ftm<=700,",
+                      "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
+                      ",best_available_taxonomy_dim$phylum_20=Porifera", #CEW added to return only coral taxa
+                      "&variables=", paste0(Vars, collapse = ","))
+  }
+  
+  if (Species == "sea pen"){
+    UrlText <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.catch_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
+                      "station_invalid=0,",
+                      "performance=Satisfactory,", "depth_ftm>=30,depth_ftm<=700,",
+                      "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
+                      ",best_available_taxonomy_dim$order_40=Pennatulacea", #CEW added to return only coral taxa
+                      "&variables=", paste0(Vars, collapse = ","))
+  }
+  
+  if (verbose){
+    message(UrlText)}
+  #CEW end edits
   
   if (verbose){
     message("Pulling catch data. This can take up to ~ 30 seconds (or more).")}
@@ -134,8 +170,10 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(1980, 5
   names(Data)[which(names(Data)=="common_name")] = "Common_name"
   
   # Pull all tow data (includes tows where the species was not observed)
-  Vars <- c("project", "year", "vessel", "pass", "tow", "datetime_utc_iso", "depth_m", "longitude_dd", "latitude_dd", "area_swept_ha_der", "trawl_id", "operation_dim$legacy_performance_code")
-  Vars.short <- c("project", "year", "vessel", "pass", "tow", "datetime_utc_iso", "depth_m", "longitude_dd", "latitude_dd", "area_swept_ha_der", "trawl_id")
+  Vars <- c("project", "year", "vessel", "pass", "tow", "datetime_utc_iso", "gear_depth_m_der", "longitude_dd", "latitude_dd", "area_swept_ha_der", "trawl_id", "operation_dim$legacy_performance_code", 
+            "temperature_at_gear_c_der", "salinity_at_gear_psu_der", "o2_at_gear_ml_per_l_der") #CEW added for DSCRTP
+  Vars.short <- c("project", "year", "vessel", "pass", "tow", "datetime_utc_iso", "gear_depth_m_der", "longitude_dd", "latitude_dd", "area_swept_ha_der", "trawl_id", 
+                  "temperature_at_gear_c_der", "salinity_at_gear_psu_der", "o2_at_gear_ml_per_l_der") #CEW added for DSCRTP
   
   UrlText <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.operation_haul_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
                     "station_invalid=0,",
@@ -155,11 +193,12 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(1980, 5
   
   All.Tows = dplyr::rename(All.Tows, Project = project, Trawl_id = trawl_id, Year = year,
                            Pass= pass, Vessel = vessel, Tow = tow, Date = datetime_utc_iso,
-                           Depth_m = depth_m, Longitude_dd = longitude_dd, Latitude_dd = latitude_dd,
-                           Area_Swept_ha = area_swept_ha_der)
+                           Depth_m = gear_depth_m_der, Longitude_dd = longitude_dd, Latitude_dd = latitude_dd, Area_Swept_ha = area_swept_ha_der, 
+                           Temp_C = temperature_at_gear_c_der, Sal_psu = salinity_at_gear_psu_der, O2_mLL = o2_at_gear_ml_per_l_der) #CEW added for DSCRTP
   
   All.Tows <- All.Tows[!duplicated(paste(All.Tows$Year, All.Tows$Pass, All.Tows$Vessel, All.Tows$Tow)),
-                       c("Project", "Trawl_id", "Year", "Pass", "Vessel", "Tow", "Date", "Depth_m", "Longitude_dd", "Latitude_dd", "Area_Swept_ha")]
+                       c("Project", "Trawl_id", "Year", "Pass", "Vessel", "Tow", "Date", "Depth_m", "Longitude_dd", "Latitude_dd", "Area_Swept_ha", 
+                         "Temp_C", "Sal_psu", "O2_mLL")] #CEW added for DSCRTP
   
   # Link each data set together based on trawl_id
   if("Common_name" %in% names(Data)) {
@@ -170,7 +209,8 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(1980, 5
                        stringsAsFactors = FALSE)
   }
   Out = dplyr::left_join(grid, All.Tows)
-  Out = dplyr::left_join(Out, Data)
+  # Out = dplyr::left_join(Out, Data)
+  Out = dplyr::left_join(Data, Out) #CEW changed to only include tows with positive catch
   #Out = dplyr::left_join(All.Tows, Data)
   
   # Fill in zeros where needed

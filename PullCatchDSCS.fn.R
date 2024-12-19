@@ -377,7 +377,7 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
   }
   
   # CEW: convert to shapefile; Need to add if logic
-  dat_sf <- st_as_sf(dat, coords = c("LongitudeInDD","LatitudeInDD"), remove = FALSE)
+  dat_sf <- st_as_sf(dat, coords = c("LongitudeInDD","LatitudeInDD"), remove = FALSE, crs = 4326)
   
   # Save shapefile
   ws <- getwd()

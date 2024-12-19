@@ -6,10 +6,10 @@ library(nwfscSurvey)
 
 # For testing purposes
 dat = nwfscSurvey::PullCatch.fn(SurveyName = "NWFSC.Combo", SciName = "Gorgonacea")
-dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", SciName = "Gorgonacea")
-dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "coral")
-dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "DSCS")
-dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo")
+dat = nwfscSurvey::PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", SciName = "Gorgonacea")
+dat = nwfscSurvey::PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "coral")
+dat = nwfscSurvey::PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "DSCS")
+dat = nwfscSurvey::PullCatchDSCS.fn(SurveyName = "NWFSC.Combo")
 
 #' Pull catch data from the NWFSC data warehouse
 #' The website is: https://www.webapp.nwfsc.noaa.gov/data
@@ -53,7 +53,7 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
                                 ",\ni.e., ", Dir, ", that doesn't exist.")
   }
   
-  if (Name %in% c("DSCS", "coral", "sponge", "sea pen")) { var.name = "scientific_name"; Species = Name; new.name = "Common_name"} #CEW: added logic to pull DSCS records
+  if (Name %in% c("DSCS", "coral", "sponge", "sea pen")) { var.name = "scientific_name"; Species = Name; new.name = "Common_name"; outName = Name} #CEW: added logic to pull DSCS records
   if (is.null(Name)) { var.name = "scientific_name"; Species = SciName; new.name = "ScientificName"; outName = Name}
   # if (is.null(SciName)) { var.name = "common_name"; Species = Name; new.name = "Common_name"; outName = SciName} #CEW: need to fix this logic now that added DSCS logic
   if (is.null(SciName) & is.null(Name)) { var.name = "common_name"; Species = "pull all"; new.name = "Common_name" }#stop("Need to specify Name or SciName to pull data!")}
@@ -116,6 +116,15 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
                       "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
                       ",species_subcategory=coral", #CEW added to return only coral taxa
                       "&variables=", paste0(Vars, collapse = ","))
+    
+    DataPull <- try(jsonlite::fromJSON(UrlText))
+    
+    if (verbose){
+      message(UrlText)}
+    
+    if(!is.data.frame(DataPull)) {
+      stop(cat("\nNo data returned by the warehouse for the filters given.\n Make sure the year range is correct for the project selected and the input name is correct,\n otherwise there may be no data for this species from this project.\n"))
+    }
   }
   
   if (Species == "sponge"){
@@ -124,8 +133,17 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
                       "performance=Satisfactory,", 
                       # "depth_ftm>=30,depth_ftm<=700,", #CEW: not necessary for DSCS catch
                       "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
-                      ",best_available_taxonomy_dim$phylum_20=Porifera", #CEW added to return only coral taxa
+                      ",best_available_taxonomy_dim$phylum_20=Porifera", #CEW added to return only sponge taxa
                       "&variables=", paste0(Vars, collapse = ","))
+    
+    DataPull <- try(jsonlite::fromJSON(UrlText))
+    
+    if (verbose){
+      message(UrlText)}
+    
+    if(!is.data.frame(DataPull)) {
+      stop(cat("\nNo data returned by the warehouse for the filters given.\n Make sure the year range is correct for the project selected and the input name is correct,\n otherwise there may be no data for this species from this project.\n"))
+    }
   }
   
   if (Species == "sea pen"){
@@ -134,12 +152,18 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
                       "performance=Satisfactory,", 
                       # "depth_ftm>=30,depth_ftm<=700,", #CEW: not necessary for DSCS catch
                       "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
-                      ",best_available_taxonomy_dim$order_40=Pennatulacea", #CEW added to return only coral taxa
+                      ",best_available_taxonomy_dim$order_40=Pennatulacea", #CEW added to return only sea pen taxa
                       "&variables=", paste0(Vars, collapse = ","))
+    
+    DataPull <- try(jsonlite::fromJSON(UrlText))
+    
+    if (verbose){
+      message(UrlText)}
+    
+    if(!is.data.frame(DataPull)) {
+      stop(cat("\nNo data returned by the warehouse for the filters given.\n Make sure the year range is correct for the project selected and the input name is correct,\n otherwise there may be no data for this species from this project.\n"))
+    }
   }
-  
-  if (verbose){
-    message(UrlText)}
   
   if (Species == "DSCS"){
     UrlText1 <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.catch_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
@@ -154,29 +178,43 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
                        "performance=Satisfactory,", 
                        # "depth_ftm>=30,depth_ftm<=700,", #CEW: not necessary for DSCS catch
                        "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
-                       ",best_available_taxonomy_dim$phylum_20=Porifera", #CEW added to return only coral taxa
+                       ",best_available_taxonomy_dim$phylum_20=Porifera", #CEW added to return only sponge taxa
                        "&variables=", paste0(Vars, collapse = ","))
     UrlText3 <- paste0("https://www.webapps.nwfsc.noaa.gov/data/api/v1/source/trawl.catch_fact/selection.json?filters=project=", paste(strsplit(project, " ")[[1]], collapse = "%20"),",",
                        # "station_invalid=0,", #CEW: not necessary for DSCS catch
                        "performance=Satisfactory,", 
                        # "depth_ftm>=30,depth_ftm<=700,", #CEW: not necessary for DSCS catch
                        "date_dim$year>=", YearRange[1], ",date_dim$year<=", YearRange[2],
-                       ",best_available_taxonomy_dim$order_40=Pennatulacea", #CEW added to return only coral taxa
+                       ",best_available_taxonomy_dim$order_40=Pennatulacea", #CEW added to return only sea pen taxa
                        "&variables=", paste0(Vars, collapse = ","))
+    
     DataPull1 <- try(jsonlite::fromJSON(UrlText1))
     if(!is.data.frame(DataPull1)) {
       stop(cat("\nNo data returned by the warehouse for the filters given.\n Make sure the year range is correct for the project selected and the input name is correct,\n otherwise there may be no data for this species from this project.\n"))
     }
+    
     DataPull2 <- try(jsonlite::fromJSON(UrlText2))
     if(!is.data.frame(DataPull2)) {
       stop(cat("\nNo data returned by the warehouse for the filters given.\n Make sure the year range is correct for the project selected and the input name is correct,\n otherwise there may be no data for this species from this project.\n"))
     }
+    
     DataPull3 <- try(jsonlite::fromJSON(UrlText3))
     if(!is.data.frame(DataPull3)) {
       stop(cat("\nNo data returned by the warehouse for the filters given.\n Make sure the year range is correct for the project selected and the input name is correct,\n otherwise there may be no data for this species from this project.\n"))
     }
+    
     # CEW: add logic to append results of multiple pull requests
     DataPull <- rbind(DataPull1, DataPull2, DataPull3)
+    
+    if (verbose){
+      message(UrlText1)
+      message(UrlText2)
+      message(UrlText2)
+      }
+    
+    if(!is.data.frame(DataPull)) {
+      stop(cat("\nNo data returned by the warehouse for the filters given.\n Make sure the year range is correct for the project selected and the input name is correct,\n otherwise there may be no data for this species from this project.\n"))
+    }
   }
 
   #CEW: end edits
@@ -337,6 +375,15 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
     if (verbose){
       message(paste("Catch data file saved to following location:", Dir))}
   }
+  
+  # CEW: convert to shapefile; Need to add if logic
+  dat_sf <- st_as_sf(dat, coords = c("LongitudeInDD","LatitudeInDD"), remove = FALSE)
+  
+  # Save shapefile
+  ws <- getwd()
+  time = Sys.time()
+  time = substring(time, 1, 10)
+  sf::st_write(dat_sf, paste0(ws, "/shp/", "Catch_", outName, "_", SurveyName, "_",  time, ".shp"))
   
   return(Out)
 }

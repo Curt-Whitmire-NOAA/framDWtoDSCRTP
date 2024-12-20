@@ -1,15 +1,16 @@
-library(nwfscSurvey)
-
 # Edit PullCatch.fn.R to accommodate a custom list of SciNames for corals, sponges, and sea pens
 # Ask Beth about creating functional groups matching those in national DSCS database
 # Draws data from the FRAM Data Warehouse tables: 'catch_fact' and 'operation_haul_fact'
 
 # For testing purposes
-dat = nwfscSurvey::PullCatch.fn(SurveyName = "NWFSC.Combo", SciName = "Gorgonacea")
-dat = nwfscSurvey::PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", SciName = "Gorgonacea")
-dat = nwfscSurvey::PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "coral")
-dat = nwfscSurvey::PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "DSCS")
-dat = nwfscSurvey::PullCatchDSCS.fn(SurveyName = "NWFSC.Combo")
+library(nwfscSurvey)
+outDir = file.path(paste0(getwd(), "/shp"))
+dat = nwfscSurvey::PullCatch.fn(SurveyName = "NWFSC.Combo", SciName = "Gorgonacea", SaveFile = TRUE, Dir = outDir)
+dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", SciName = "Gorgonacea", SaveFile = TRUE, Dir = outDir)
+dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "coral", SaveFile = TRUE, Dir = outDir)
+dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "sponge", SaveFile = TRUE, Dir = outDir)
+dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "sea pen", SaveFile = TRUE, Dir = outDir)
+dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "DSCS", SaveFile = TRUE, Dir = outDir)
 
 #' Pull catch data from the NWFSC data warehouse
 #' The website is: https://www.webapp.nwfsc.noaa.gov/data
@@ -372,18 +373,14 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
     time = substring(time, 1, 10)
     #save(Out, file = paste0(Dir, "/Catch_", outName, "_", SurveyName, "_",  time, ".rda"))
     save(Out, file = file.path(Dir, paste("Catch_", outName, "_", SurveyName, "_",  time, ".rda", sep = "")))
+    # CEW: convert to shapefile and save
+    require(sf)
+    Out_sf <- sf::st_as_sf(Out, coords = c("LongitudeInDD","LatitudeInDD"), remove = FALSE, crs = 4326)
+    sf::st_write(Out_sf, file.path(Dir, paste("Catch_", outName, "_", SurveyName, "_",  time, ".shp", sep = "")))
+    
     if (verbose){
       message(paste("Catch data file saved to following location:", Dir))}
   }
-  
-  # CEW: convert to shapefile; Need to add if logic
-  dat_sf <- st_as_sf(dat, coords = c("LongitudeInDD","LatitudeInDD"), remove = FALSE, crs = 4326)
-  
-  # Save shapefile
-  ws <- getwd()
-  time = Sys.time()
-  time = substring(time, 1, 10)
-  sf::st_write(dat_sf, paste0(ws, "/shp/", "Catch_", outName, "_", SurveyName, "_",  time, ".shp"))
   
   return(Out)
 }

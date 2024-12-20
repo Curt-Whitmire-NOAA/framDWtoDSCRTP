@@ -1,5 +1,5 @@
 # Edit PullCatch.fn.R to accommodate a custom list of SciNames for corals, sponges, and sea pens
-# Ask Beth about creating functional groups matching those in national DSCS database
+# Create functional groups matching those in national DSCS database
 # Draws data from the FRAM Data Warehouse tables: 'catch_fact' and 'operation_haul_fact'
 
 # For testing purposes

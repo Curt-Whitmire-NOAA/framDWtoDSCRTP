@@ -1,6 +1,8 @@
 # Edit PullCatch.fn.R to accommodate a custom list of SciNames for corals, sponges, and sea pens
 # Create functional groups matching those in national DSCS database
 # Draws data from the FRAM Data Warehouse tables: 'catch_fact' and 'operation_haul_fact'
+# WARNING!!: nwfscSurvey::pullCatch.fn is deprecated; nwfscSurvey::pull_catch function is current one to use
+# CEW: need to add new sub_category values to match DSCRTP VernacularNameCategory (see Line 59)
 
 # For testing purposes
 library(nwfscSurvey)
@@ -54,7 +56,7 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
                                 ",\ni.e., ", Dir, ", that doesn't exist.")
   }
   
-  if (Name %in% c("DSCS", "coral", "sponge", "sea pen")) { var.name = "scientific_name"; Species = Name; new.name = "Common_name"; outName = Name} #CEW: added logic to pull DSCS records
+  if (Name %in% c("DSCS", "coral", "sponge", "sea pen")) { var.name = "scientific_name"; Species = Name; new.name = "Common_name"; outName = Name} #CEW: need to add new sub_category values to match DSCRTP VernacularNameCategory
   if (is.null(Name)) { var.name = "scientific_name"; Species = SciName; new.name = "ScientificName"; outName = Name}
   # if (is.null(SciName)) { var.name = "common_name"; Species = Name; new.name = "Common_name"; outName = SciName} #CEW: need to fix this logic now that added DSCS logic
   if (is.null(SciName) & is.null(Name)) { var.name = "common_name"; Species = "pull all"; new.name = "Common_name" }#stop("Need to specify Name or SciName to pull data!")}

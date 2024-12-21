@@ -7,12 +7,12 @@
 # For testing purposes
 library(nwfscSurvey)
 outDir = file.path(paste0(getwd(), "/shp"))
-dat = nwfscSurvey::PullCatch.fn(SurveyName = "NWFSC.Combo", SciName = "Gorgonacea", SaveFile = TRUE, Dir = outDir)
-dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", SciName = "Gorgonacea", SaveFile = TRUE, Dir = outDir)
-dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "coral", SaveFile = TRUE, Dir = outDir)
-dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "sponge", SaveFile = TRUE, Dir = outDir)
-dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "sea pen", SaveFile = TRUE, Dir = outDir)
-dat = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "DSCS", SaveFile = TRUE, Dir = outDir)
+datGOR = nwfscSurvey::PullCatch.fn(SurveyName = "NWFSC.Combo", SciName = "Gorgonacea", SaveFile = TRUE, Dir = outDir)
+datGOR = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", SciName = "Gorgonacea", SaveFile = TRUE, Dir = outDir)
+datCOR = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "coral", SaveFile = TRUE, Dir = outDir)
+datSPO = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "sponge", SaveFile = TRUE, Dir = outDir)
+datPEN = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "sea pen", SaveFile = TRUE, Dir = outDir)
+datDSCS = PullCatchDSCS.fn(SurveyName = "NWFSC.Combo", Name = "DSCS", SaveFile = TRUE, Dir = outDir)
 
 #' Pull catch data from the NWFSC data warehouse
 #' The website is: https://www.webapp.nwfsc.noaa.gov/data
@@ -378,7 +378,7 @@ PullCatchDSCS.fn <- function (Name = NULL, SciName = NULL, YearRange = c(2003, 5
     # CEW: convert to shapefile and save
     require(sf)
     Out_sf <- sf::st_as_sf(Out, coords = c("LongitudeInDD","LatitudeInDD"), remove = FALSE, crs = 4326)
-    sf::st_write(Out_sf, file.path(Dir, paste("Catch_", outName, "_", SurveyName, "_",  time, ".shp", sep = "")))
+    try(sf::st_write(Out_sf, file.path(Dir, paste("Catch_", outName, "_", SurveyName, "_",  time, ".shp", sep = ""))))
     
     if (verbose){
       message(paste("Catch data file saved to following location:", Dir))}
